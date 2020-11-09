@@ -1,0 +1,74 @@
+---
+- hosts: nodes
+  become: true
+  tasks:
+
+  - name: "Uninstall old Docker versions"
+    apt:
+      name: ['docker', 'docker-engine', 'docker.io', 'containerd', 'runc']
+      state: absent
+      force: yes
+
+  - name: "Pre-installations for Docker repository"
+    apt:
+      name: ['apt-transport-https','ca-certificates','curl','software-properties-common','gnupg-agent', 'python3-pip']
+      update_cache: yes
+
+  - name: "Add Docker GPG key"
+    apt_key:
+      id: 0EBFCD88
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: "Add Docker repository"
+    apt_repository:
+    apt:
+      name: ['apt-transport-https','ca-certificates','curl','software-properties-common','gnupg-agent', 'python3-pip']
+      update_cache: yes
+
+  - name: "Add Docker GPG key"
+    apt_key:
+      id: 0EBFCD88
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: "Add Docker repository"
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable"
+      state: present
+      filename: docker
+
+  - name: "Install 'docker-ce'"
+    apt:
+      name: ['docker-ce','docker-ce-cli','containerd.io']
+      update_cache: yes
+    notify:
+    - restart docker-ce
+
+  - name: "Add the user ubuntu to the docker group"
+    user:
+      name: ubuntu
+      group: docker
+
+  - name: "Install docker-py in order to use docker container plugin"
+    pip:
+      name: docker-py
+      state: present
+
+  - name: "Install NginX containers on remote nodes"
+    docker_container:
+      name: nginx_container
+      image: nginx:latest
+      state: started
+      detach: true
+      ports:
+        - "8080:80"
+      expose:
+        - "8080"
+      recreate: no
+
+  handlers:
+    - name: restart docker-ce
+      service:
+        name: docker-ce
+        state: restarted

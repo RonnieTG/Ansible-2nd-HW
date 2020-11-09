@@ -1,0 +1,49 @@
+---
+- hosts: nodes
+  become: true
+  tasks:
+
+  - name: "Uninstall old Docker versions"
+    apt:
+      name: ['docker', 'docker-engine', 'docker.io', 'containerd', 'runc']
+      state: absent
+      force: yes
+
+  - name: "Pre-installations for Docker repository"
+    apt:
+      name: ['apt-transport-https','ca-certificates','curl','software-properties-common','gnupg-agent', 'python3-pip']
+      update_cache: yes
+
+  - name: "Add Docker GPG key"
+    apt_key:
+      id: 0EBFCD88
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: "Add Docker repository"
+    apt_repository:
+---
+- hosts: localhost
+  become: yes
+  tasks:
+
+  - name: "Generate actual key"
+    openssh_keypair:
+      path: "/home/ubuntu/.ssh/ssh_test_key"
+      type: rsa
+      size: 4096
+      state: present
+      force: no
+
+- hosts: nodes
+  become: yes
+  tasks:
+  - name: "Create users remotely"
+    user:
+      name: ronnie
+
+  - name: Set authorized key
+    authorized_key:
+      user: ronnie
+      state: present
+      key: "{{ lookup('file', '/home/ubuntu/.ssh/ssh_test_key.pub') }}"
